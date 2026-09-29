@@ -1,18 +1,20 @@
 package com.example.cloudbuy.ui.components.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.cloudbuy.ui.components.ProductCard
-import com.example.cloudbuy.ui.components.theme.*
+import androidx.compose.ui.unit.sp
 import com.example.cloudbuy.viewmodel.CartViewModel
 import com.example.cloudbuy.viewmodel.ProductViewModel
 
@@ -21,43 +23,47 @@ import com.example.cloudbuy.viewmodel.ProductViewModel
 fun FavoritesScreen(
     productViewModel: ProductViewModel,
     cartViewModel: CartViewModel,
-    onProductClick: (String) -> Unit
+    onProductClick: (String) -> Unit = {},
+    onNavigateToHome: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {}
 ) {
-    val products by productViewModel.products.collectAsState()
-    val favorites by cartViewModel.favorites.collectAsState()
-    val favProducts = products.filter { favorites.contains(it.id) }
+    val cartItems by cartViewModel.cartItems.collectAsState()
+    val totalCartCount = cartItems.sumOf { it.quantity }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Favoritos") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CloudBlue, titleContentColor = CloudWhite)
+                title = { Text("Favoritos", fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 22.sp) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
-        }
-    ) { padding ->
-        if (favProducts.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.FavoriteBorder, null, Modifier.size(72.dp), CloudLightText)
-                    Text("Nenhum favorito", color = CloudLightText)
-                }
+        },
+        bottomBar = {
+            NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+                NavigationBarItem(selected = false, onClick = onNavigateToHome, icon = { Icon(Icons.Outlined.Home, contentDescription = "Início") }, label = { Text("Início") })
+                NavigationBarItem(
+                    selected = true, onClick = { },
+                    icon = { Icon(Icons.Default.Favorite, contentDescription = "Favoritos") },
+                    label = { Text("Favoritos") },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Color(0xFF1565C0), selectedTextColor = Color(0xFF1565C0))
+                )
+                NavigationBarItem(
+                    selected = false, onClick = onNavigateToCart,
+                    icon = { BadgedBox(badge = { if (totalCartCount > 0) Badge { Text(totalCartCount.toString()) } }) { Icon(Icons.Outlined.ShoppingBag, contentDescription = "Carrinho") } },
+                    label = { Text("Carrinho") }
+                )
+                NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Outlined.Person, contentDescription = "Perfil") }, label = { Text("Perfil") })
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(favProducts, key = { it.id }) { product ->
-                    ProductCard(
-                        product = product,
-                        isFavorite = true,
-                        onClick = { onProductClick(product.id) },
-                        onFavoriteClick = { cartViewModel.toggleFavorite(product.id) }
-                    )
-                }
+        },
+        containerColor = Color(0xFFF5F7FA)
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.size(80.dp), tint = Color.LightGray)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Nenhum produto favoritado", fontSize = 18.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Salve itens para vê-los mais tarde.", fontSize = 14.sp, color = Color.LightGray)
             }
         }
     }
