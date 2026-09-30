@@ -97,6 +97,7 @@ fun AppNavigation() {
                 cartViewModel = cartViewModel,
                 onMyOrders = { navController.navigate("orders") },
                 onNavigateToAddresses = { navController.navigate("addresses") },
+                onNavigateToAddProduct = { navController.navigate("add_product") },
                 onLoginClick = { navController.navigate("login") },
                 onLogout = { navController.navigate("login") { popUpTo(0) } },
                 onNavigateToHome = { navController.navigate("home") { popUpTo(0) } },
@@ -105,8 +106,18 @@ fun AppNavigation() {
             )
         }
 
+        composable("add_product") {
+            AddProductScreen(
+                productViewModel = productViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable("addresses") {
-            AddressScreen(onBack = { navController.popBackStack() })
+            AddressScreen(
+                cartViewModel = cartViewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable(

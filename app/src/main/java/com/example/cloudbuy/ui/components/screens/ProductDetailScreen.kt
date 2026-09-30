@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.cloudbuy.data.model.Product
+import com.example.cloudbuy.viewmodel.AuthViewModel
 import com.example.cloudbuy.viewmodel.CartViewModel
 import java.text.NumberFormat
 import java.util.Locale
@@ -34,10 +36,17 @@ import java.util.Locale
 fun ProductDetailScreen(
     product: Product,
     cartViewModel: CartViewModel,
+    authViewModel: AuthViewModel,
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
+
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val isLoggedIn = currentUser != null
+
+    val purchasedIds by cartViewModel.purchasedProductIds.collectAsState()
+    val hasPurchased = purchasedIds.contains(product.id)
 
     var userRating by remember { mutableStateOf(0) }
     var hasRated by remember { mutableStateOf(false) }
@@ -139,7 +148,7 @@ fun ProductDetailScreen(
                 Divider(color = Color(0xFFEEEEEE))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Avaliações", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Avaliações do Produto", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,65 +184,119 @@ fun ProductDetailScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (hasRated || (isLoggedIn && hasPurchased)) Color(0xFFFFF8E1) else Color(0xFFF5F7FA)
+                    ),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            if (hasRated) "Sua avaliação" else "Avalie este produto",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            repeat(5) { index ->
-                                val starValue = index + 1
-                                Icon(
-                                    imageVector = if (starValue <= userRating) Icons.Default.Star
-                                    else Icons.Outlined.StarBorder,
-                                    contentDescription = "$starValue estrelas",
-                                    tint = Color(0xFFFFB300),
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clickable {
-                                            if (!hasRated) {
-                                                userRating = starValue
-                                            }
-                                        }
-                                        .padding(4.dp)
+                        when {
+                            !isLoggedIn -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color.Gray)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Avaliações restritas",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = Color.DarkGray
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Faça login e compre este produto para poder avaliá-lo.",
+                                    fontSize = 13.sp,
+                                    color = Color.Gray
                                 )
                             }
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        if (!hasRated) {
-                            Button(
-                                onClick = {
-                                    if (userRating == 0) {
-                                        Toast.makeText(context, "Selecione de 1 a 5 estrelas", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        val total = displayRating * ratingCount + userRating
-                                        ratingCount += 1
-                                        displayRating = total / ratingCount
-                                        hasRated = true
-                                        Toast.makeText(context, "Avaliação enviada! Obrigado.", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
-                            ) {
-                                Text("Enviar avaliação", fontWeight = FontWeight.Bold, color = Color.White)
+
+                            !hasPurchased -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFD32F2F))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Compra não verificada",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = Color(0xFFD32F2F)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Apenas clientes que compraram este produto podem deixar uma avaliação.",
+                                    fontSize = 13.sp,
+                                    color = Color.DarkGray
+                                )
                             }
-                        } else {
-                            Text(
-                                "Você avaliou com $userRating estrela(s). Obrigado!",
-                                fontSize = 13.sp,
-                                color = Color(0xFF5D4037),
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            )
+
+                            else -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Verified, contentDescription = null, tint = Color(0xFF2E7D32))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        if (hasRated) "Sua avaliação enviada" else "Compra Verificada • Avalie o produto",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF2E7D32)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    repeat(5) { index ->
+                                        val starValue = index + 1
+                                        Icon(
+                                            imageVector = if (starValue <= userRating) Icons.Default.Star
+                                            else Icons.Outlined.StarBorder,
+                                            contentDescription = "$starValue estrelas",
+                                            tint = Color(0xFFFFB300),
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clickable {
+                                                    if (!hasRated) {
+                                                        userRating = starValue
+                                                    }
+                                                }
+                                                .padding(4.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                if (!hasRated) {
+                                    Button(
+                                        onClick = {
+                                            if (userRating == 0) {
+                                                Toast.makeText(context, "Selecione de 1 a 5 estrelas", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                val total = displayRating * ratingCount + userRating
+                                                ratingCount += 1
+                                                displayRating = total / ratingCount
+                                                hasRated = true
+                                                Toast.makeText(context, "Avaliação enviada com sucesso!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
+                                    ) {
+                                        Text("Enviar Avaliação", fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                } else {
+                                    Text(
+                                        "Obrigado por avaliar com $userRating estrela(s)!",
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -316,7 +379,7 @@ fun ProductDetailScreen(
             text = {
                 if (reportSent) {
                     Text(
-                        "Denúncia enviada com sucesso.\nNossa equipe irá analisar em breve.",
+                        "Denúncia enviada com sucesso.\nNossa equipe irá analisar a imagem/conteúdo em breve.",
                         fontSize = 15.sp
                     )
                 } else {

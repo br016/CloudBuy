@@ -31,6 +31,7 @@ fun ProfileScreen(
     cartViewModel: CartViewModel,
     onMyOrders: () -> Unit = {},
     onNavigateToAddresses: () -> Unit = {},
+    onNavigateToAddProduct: () -> Unit = {},
     onLoginClick: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
@@ -89,6 +90,13 @@ fun ProfileScreen(
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
                 Column {
                     ProfileMenuItem(
+                        icon = Icons.Default.AddBusiness,
+                        title = "Anunciar / Vender Produto",
+                        subtitle = "Cadastrar produto no catálogo da loja",
+                        onClick = { if (isLoggedIn) onNavigateToAddProduct() else onLoginClick() }
+                    )
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF5F5F5))
+                    ProfileMenuItem(
                         icon = Icons.Default.ReceiptLong,
                         title = "Meus Pedidos",
                         subtitle = "Acompanhar entregas e histórico",
@@ -143,7 +151,7 @@ fun ProfileScreen(
 private fun ProfileMenuItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFF5F7FA)), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = Color(0xFF1565C0), modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

@@ -27,14 +27,11 @@ fun OrdersScreen(
     cartViewModel: CartViewModel,
     onNavigateHome: () -> Unit = {}
 ) {
-    // Pega o endereço real salvo do pedido
     val deliveryAddress by cartViewModel.deliveryAddress.collectAsState()
 
-    // Cálculo de datas reais
     val calendar = Calendar.getInstance()
     val orderDateFormatted = SimpleDateFormat("dd 'de' MMM, HH:mm", Locale("pt", "BR")).format(calendar.time)
 
-    // Previsão de entrega (3 dias a partir de hoje)
     val deliveryCalendar = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 3) }
     val deliveryDateFormatted = SimpleDateFormat("EEEE, dd 'de' MMMM", Locale("pt", "BR")).format(deliveryCalendar.time)
 
@@ -58,8 +55,6 @@ fun OrdersScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // ─── CARD PRINCIPAL DE PREVISÃO ───
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
@@ -84,7 +79,6 @@ fun OrdersScreen(
                 }
             }
 
-            // ─── RASTREAMENTO EM TEMPO REAL ───
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -126,7 +120,6 @@ fun OrdersScreen(
                 }
             }
 
-            // ─── ENDEREÇO REAL DO USUÁRIO ───
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -146,7 +139,6 @@ fun OrdersScreen(
                 }
             }
 
-            // ─── BOTÃO VOLTAR PARA A LOJA ───
             OutlinedButton(
                 onClick = onNavigateHome,
                 modifier = Modifier

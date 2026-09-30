@@ -46,10 +46,10 @@ fun HomeScreen(
     onNavigateToFavorites: () -> Unit = {}
 ) {
     val products by productViewModel.products.collectAsState()
+    val isLoading by productViewModel.isLoading.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val totalCartCount = cartItems.sumOf { it.quantity }
 
-    // Estado da categoria — NÃO reseta sozinho
     var selectedCategory by remember { mutableStateOf("Todos") }
     val categories = listOf("Todos", "Eletrônicos", "Roupas", "Esportes", "Acessórios")
 
@@ -144,16 +144,13 @@ fun HomeScreen(
             Text("Categorias", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.DarkGray)
             Spacer(modifier = Modifier.height(10.dp))
 
-            // CATEGORIAS — filtra na Home e MANTÉM a seleção
+            // CATEGORIAS
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(categories) { category ->
                     val isSelected = selectedCategory == category
                     FilterChip(
                         selected = isSelected,
-                        onClick = {
-                            // Só muda o filtro. NÃO navega para outra tela.
-                            selectedCategory = category
-                        },
+                        onClick = { selectedCategory = category },
                         label = {
                             Text(
                                 category,
@@ -179,7 +176,30 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (filteredProducts.isEmpty()) {
+            // CARREGAMENTO OU LISTA DE PRODUTOS
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 60.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color = Color(0xFF1565C0),
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(44.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Carregando produtos...",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else if (filteredProducts.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

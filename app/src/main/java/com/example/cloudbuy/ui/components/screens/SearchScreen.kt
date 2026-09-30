@@ -1,8 +1,6 @@
 package com.example.cloudbuy.ui.components.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -58,15 +56,15 @@ fun SearchScreen(
     onBack: () -> Unit = {}
 ) {
     val products by productViewModel.products.collectAsState()
+    val isLoading by productViewModel.isLoading.collectAsState()
+
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    // Estados do Filtro
     var query by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todos") }
     var selectedSort by remember { mutableStateOf(SortOption.RELEVANCE) }
 
-    // Filtro de Preço
     var minPriceInput by remember { mutableStateOf("") }
     var maxPriceInput by remember { mutableStateOf("") }
     var appliedMinPrice by remember { mutableStateOf<Double?>(null) }
@@ -76,7 +74,6 @@ fun SearchScreen(
 
     val categories = listOf("Todos", "Eletrônicos", "Roupas", "Esportes", "Acessórios")
 
-    // Lógica do Filtro e Ordenação
     val filteredProducts = remember(query, selectedCategory, selectedSort, appliedMinPrice, appliedMaxPrice, products) {
         var list = products.filter { product ->
             val matchesQuery = query.isBlank() ||
@@ -93,7 +90,6 @@ fun SearchScreen(
             matchesQuery && matchesCategory && matchesMinPrice && matchesMaxPrice
         }
 
-        // Ordenação
         list = when (selectedSort) {
             SortOption.LOW_PRICE -> list.sortedBy { it.price }
             SortOption.HIGH_PRICE -> list.sortedByDescending { it.price }
@@ -155,7 +151,6 @@ fun SearchScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // CATEGORIAS
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -179,7 +174,6 @@ fun SearchScreen(
                 }
             }
 
-            // BARRA DE OPÇÕES DE FILTRO E ORDENAÇÃO
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -187,7 +181,6 @@ fun SearchScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botão de Abrir Filtro de Preço
                 Button(
                     onClick = { showFilterDialog = true },
                     colors = ButtonDefaults.buttonColors(
@@ -206,7 +199,6 @@ fun SearchScreen(
                     )
                 }
 
-                // Selector de Ordenação
                 var sortMenuExpanded by remember { mutableStateOf(false) }
                 Box {
                     OutlinedButton(
@@ -235,7 +227,6 @@ fun SearchScreen(
                 }
             }
 
-            // CONTADOR DE RESULTADOS E BOTÃO LIMPAR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -269,8 +260,15 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // LISTA DE PRODUTOS
-            if (filteredProducts.isEmpty()) {
+            // CARREGAMENTO OU LISTA
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF1565C0), strokeWidth = 3.dp)
+                }
+            } else if (filteredProducts.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -302,7 +300,6 @@ fun SearchScreen(
         }
     }
 
-    // DIÁLOGO DE FILTRO DE PREÇO
     if (showFilterDialog) {
         AlertDialog(
             onDismissRequest = { showFilterDialog = false },

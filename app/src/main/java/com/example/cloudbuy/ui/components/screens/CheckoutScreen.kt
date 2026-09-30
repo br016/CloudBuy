@@ -1,5 +1,6 @@
 package com.example.cloudbuy.ui.components.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,12 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.cloudbuy.viewmodel.AuthViewModel
 import com.example.cloudbuy.viewmodel.CartViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -39,6 +46,9 @@ fun CheckoutScreen(
     onNavigateToLogin: () -> Unit = {},
     onOrderConfirmed: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     val currentUser by authViewModel.currentUser.collectAsState()
     val isLoggedIn = currentUser != null
 
@@ -55,11 +65,47 @@ fun CheckoutScreen(
 
     var selectedPayment by remember { mutableStateOf("pix") }
     var showAddressError by remember { mutableStateOf(false) }
+    var isLoadingCep by remember { mutableStateOf(false) }
 
     var cardNumber by remember { mutableStateOf("") }
     var cardName by remember { mutableStateOf("") }
     var cardExpiry by remember { mutableStateOf("") }
     var cardCvv by remember { mutableStateOf("") }
+
+    // BUSCA REAL VIA CEP
+    fun fetchCep(cepToSearch: String) {
+        val clean = cepToSearch.replace("-", "").replace(".", "").trim()
+        if (clean.length == 8) {
+            isLoadingCep = true
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val response = URL("https://viacep.com.br/ws/$clean/json/").readText()
+                    val json = JSONObject(response)
+
+                    if (!json.has("erro")) {
+                        withContext(Dispatchers.Main) {
+                            street = json.optString("logradouro", "")
+                            neighborhood = json.optString("bairro", "")
+                            city = json.optString("localidade", "")
+                            state = json.optString("uf", "")
+                            isLoadingCep = false
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            isLoadingCep = false
+                            Toast.makeText(context, "CEP não encontrado.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        isLoadingCep = false
+                        Toast.makeText(context, "Erro de conexão ao buscar CEP.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     if (!isLoggedIn) {
         AlertDialog(
@@ -136,7 +182,14 @@ fun CheckoutScreen(
                     ) {
                         OutlinedTextField(
                             value = cep,
-                            onValueChange = { if (it.length <= 9) cep = it },
+                            onValueChange = {
+                                if (it.length <= 9) {
+                                    cep = it
+                                    if (it.replace("-", "").length == 8) {
+                                        fetchCep(it)
+                                    }
+                                }
+                            },
                             label = { Text("CEP") },
                             placeholder = { Text("Ex: 01001-000") },
                             modifier = Modifier.weight(1f),
@@ -146,21 +199,19 @@ fun CheckoutScreen(
                             isError = showAddressError && cep.isBlank()
                         )
                         Button(
-                            onClick = {
-                                if (cep.length >= 8) {
-                                    street = "Avenida Paulista"
-                                    neighborhood = "Bela Vista"
-                                    city = "São Paulo"
-                                    state = "SP"
-                                }
-                            },
+                            onClick = { fetchCep(cep) },
                             modifier = Modifier.height(56.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
+                            enabled = !isLoadingCep
                         ) {
-                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("BUSCAR", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            if (isLoadingCep) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("BUSCAR", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
 
@@ -354,12 +405,8 @@ fun CheckoutScreen(
                     if (!addressOk) {
                         showAddressError = true
                     } else {
-                        // Monta o endereço real do usuário
                         val fullAddress = "$street, $number - $neighborhood, $city - $state, CEP $cep"
-
-                        // Grava no ViewModel e confirma compra
                         cartViewModel.confirmPurchase(fullAddress)
-
                         onOrderConfirmed()
                     }
                 },
